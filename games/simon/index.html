@@ -1,0 +1,199 @@
+﻿<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Simon</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: #111;
+      color: #eee;
+      font-family: Arial, sans-serif;
+    }
+
+    main {
+      width: min(92vw, 420px);
+      text-align: center;
+    }
+
+    .bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+      font-size: 18px;
+    }
+
+    button {
+      border: 1px solid #777;
+      background: #222;
+      color: #eee;
+      padding: 8px 12px;
+      cursor: pointer;
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      aspect-ratio: 1;
+    }
+
+    .pad {
+      border: 0;
+      min-width: 0;
+      padding: 0;
+      opacity: 0.58;
+    }
+
+    .pad.active {
+      opacity: 1;
+      filter: brightness(1.35);
+    }
+
+    .green {
+      background: #20b05b;
+    }
+
+    .red {
+      background: #d94b43;
+    }
+
+    .yellow {
+      background: #d6b33f;
+    }
+
+    .blue {
+      background: #3d78d8;
+    }
+
+    p {
+      min-height: 20px;
+      margin: 12px 0 0;
+      color: #aaa;
+      font-size: 14px;
+    }
+  
+    .classic-world-menu-link {
+      position: fixed;
+      top: 14px;
+      left: 14px;
+      z-index: 9999;
+      display: inline-flex;
+      align-items: center;
+      min-height: 38px;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      border-radius: 8px;
+      padding: 9px 12px;
+      background: rgba(12, 13, 16, 0.88);
+      color: #fff;
+      font: 700 14px/1 Arial, sans-serif;
+      text-decoration: none;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    }
+
+    .classic-world-menu-link:hover,
+    .classic-world-menu-link:focus-visible {
+      background: #f3c15f;
+      color: #111;
+      outline: none;
+    }
+  </style>
+</head>
+<body>
+    <a class="classic-world-menu-link" href="../index.html" aria-label="Back to menu">Back to Menu</a>
+  <main>
+    <div class="bar">
+      <strong>Simon</strong>
+      <span>Round: <span id="round">0</span></span>
+      <button id="start" type="button">Start</button>
+    </div>
+    <div class="board" aria-label="Simon game board">
+      <button class="pad green" data-color="green" type="button" aria-label="green"></button>
+      <button class="pad red" data-color="red" type="button" aria-label="red"></button>
+      <button class="pad yellow" data-color="yellow" type="button" aria-label="yellow"></button>
+      <button class="pad blue" data-color="blue" type="button" aria-label="blue"></button>
+    </div>
+    <p id="message">Press Start to play</p>
+  </main>
+
+  <script>
+    const colors = ["green", "red", "yellow", "blue"];
+    const pads = Array.from(document.querySelectorAll(".pad"));
+    const roundEl = document.getElementById("round");
+    const messageEl = document.getElementById("message");
+    const startBtn = document.getElementById("start");
+
+    let sequence = [];
+    let index = 0;
+    let accepting = false;
+
+    function setRound() {
+      roundEl.textContent = String(sequence.length);
+    }
+
+    function flash(color) {
+      const pad = document.querySelector(`[data-color="${color}"]`);
+      pad.classList.add("active");
+      setTimeout(() => pad.classList.remove("active"), 260);
+    }
+
+    function addStep() {
+      sequence.push(colors[Math.floor(Math.random() * colors.length)]);
+      index = 0;
+      accepting = false;
+      setRound();
+      messageEl.textContent = "Watch the pattern";
+      playSequence();
+    }
+
+    function playSequence() {
+      sequence.forEach((color, i) => {
+        setTimeout(() => flash(color), 520 * i);
+      });
+      setTimeout(() => {
+        accepting = true;
+        messageEl.textContent = "Repeat the pattern";
+      }, 520 * sequence.length);
+    }
+
+    function fail() {
+      accepting = false;
+      messageEl.textContent = "Missed. Press Start to try again";
+    }
+
+    function choose(color) {
+      if (!accepting) return;
+      flash(color);
+      if (color !== sequence[index]) {
+        fail();
+        return;
+      }
+
+      index += 1;
+      if (index === sequence.length) {
+        accepting = false;
+        messageEl.textContent = "Correct";
+        setTimeout(addStep, 650);
+      }
+    }
+
+    startBtn.addEventListener("click", () => {
+      sequence = [];
+      addStep();
+    });
+
+    pads.forEach(pad => {
+      pad.addEventListener("click", () => choose(pad.dataset.color));
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,298 @@
+﻿<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Asteroids</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: #08090d;
+      color: #eee;
+      font-family: Arial, sans-serif;
+    }
+
+    main {
+      width: min(94vw, 720px);
+    }
+
+    .bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      font-size: 18px;
+    }
+
+    button {
+      border: 1px solid #777;
+      background: #191b22;
+      color: #eee;
+      padding: 8px 12px;
+      cursor: pointer;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      background: #000;
+      border: 2px solid #555;
+    }
+
+    p {
+      margin: 10px 0 0;
+      text-align: center;
+      color: #aaa;
+      font-size: 14px;
+    }
+  
+    .classic-world-menu-link {
+      position: fixed;
+      top: 14px;
+      left: 14px;
+      z-index: 9999;
+      display: inline-flex;
+      align-items: center;
+      min-height: 38px;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      border-radius: 8px;
+      padding: 9px 12px;
+      background: rgba(12, 13, 16, 0.88);
+      color: #fff;
+      font: 700 14px/1 Arial, sans-serif;
+      text-decoration: none;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    }
+
+    .classic-world-menu-link:hover,
+    .classic-world-menu-link:focus-visible {
+      background: #f3c15f;
+      color: #111;
+      outline: none;
+    }
+  </style>
+</head>
+<body>
+    <a class="classic-world-menu-link" href="../index.html" aria-label="Back to menu">Back to Menu</a>
+  <main>
+    <div class="bar">
+      <strong>Asteroids</strong>
+      <span>Score: <span id="score">0</span></span>
+      <button id="restart" type="button">Restart</button>
+    </div>
+    <canvas id="game" width="720" height="540" aria-label="Asteroids game board"></canvas>
+    <p>Arrow keys to turn and thrust. Space to fire.</p>
+  </main>
+
+  <script>
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+    const scoreEl = document.getElementById("score");
+    const restartBtn = document.getElementById("restart");
+    const keys = new Set();
+
+    let ship;
+    let bullets;
+    let rocks;
+    let score;
+    let cooldown;
+    let ended;
+
+    function reset() {
+      ship = {
+        x: canvas.width / 2,
+        y: canvas.height / 2,
+        vx: 0,
+        vy: 0,
+        angle: -Math.PI / 2,
+        radius: 14
+      };
+      bullets = [];
+      rocks = [];
+      score = 0;
+      cooldown = 0;
+      ended = false;
+      addRock(90, 120, 1.2, 0.7, 32);
+      addRock(610, 110, -0.9, 1.0, 30);
+      addRock(520, 430, -1.1, -0.8, 34);
+      addRock(150, 400, 1.0, -0.7, 28);
+      updateScore();
+    }
+
+    function addRock(x, y, vx, vy, radius) {
+      rocks.push({ x, y, vx, vy, radius });
+    }
+
+    function updateScore() {
+      scoreEl.textContent = String(score);
+    }
+
+    function wrap(obj) {
+      if (obj.x < 0) obj.x += canvas.width;
+      if (obj.x > canvas.width) obj.x -= canvas.width;
+      if (obj.y < 0) obj.y += canvas.height;
+      if (obj.y > canvas.height) obj.y -= canvas.height;
+    }
+
+    function distance(a, b) {
+      return Math.hypot(a.x - b.x, a.y - b.y);
+    }
+
+    function shoot() {
+      if (cooldown > 0) return;
+      bullets.push({
+        x: ship.x + Math.cos(ship.angle) * 18,
+        y: ship.y + Math.sin(ship.angle) * 18,
+        vx: ship.vx + Math.cos(ship.angle) * 6,
+        vy: ship.vy + Math.sin(ship.angle) * 6,
+        life: 55
+      });
+      cooldown = 12;
+    }
+
+    function update() {
+      if (ended) return;
+
+      if (keys.has("ArrowLeft")) ship.angle -= 0.08;
+      if (keys.has("ArrowRight")) ship.angle += 0.08;
+      if (keys.has("ArrowUp")) {
+        ship.vx += Math.cos(ship.angle) * 0.12;
+        ship.vy += Math.sin(ship.angle) * 0.12;
+      }
+      if (keys.has(" ")) shoot();
+      if (cooldown > 0) cooldown -= 1;
+
+      ship.x += ship.vx;
+      ship.y += ship.vy;
+      ship.vx *= 0.992;
+      ship.vy *= 0.992;
+      wrap(ship);
+
+      bullets.forEach(bullet => {
+        bullet.x += bullet.vx;
+        bullet.y += bullet.vy;
+        bullet.life -= 1;
+        wrap(bullet);
+      });
+      bullets = bullets.filter(bullet => bullet.life > 0);
+
+      rocks.forEach(rock => {
+        rock.x += rock.vx;
+        rock.y += rock.vy;
+        wrap(rock);
+      });
+
+      for (let i = rocks.length - 1; i >= 0; i -= 1) {
+        const rock = rocks[i];
+        const hitIndex = bullets.findIndex(bullet => distance(bullet, rock) < rock.radius);
+        if (hitIndex === -1) continue;
+
+        bullets.splice(hitIndex, 1);
+        rocks.splice(i, 1);
+        score += 10;
+        updateScore();
+
+        if (rock.radius > 20) {
+          addRock(rock.x, rock.y, -rock.vy, rock.vx, rock.radius * 0.62);
+          addRock(rock.x, rock.y, rock.vy, -rock.vx, rock.radius * 0.62);
+        }
+      }
+
+      if (rocks.some(rock => distance(ship, rock) < ship.radius + rock.radius)) {
+        ended = true;
+      }
+
+      if (rocks.length === 0) {
+        addRock(80, 80, 1.4, 0.9, 34);
+        addRock(640, 460, -1.2, -0.8, 34);
+      }
+    }
+
+    function drawShip() {
+      ctx.save();
+      ctx.translate(ship.x, ship.y);
+      ctx.rotate(ship.angle);
+      ctx.strokeStyle = "#eee";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(18, 0);
+      ctx.lineTo(-12, -10);
+      ctx.lineTo(-7, 0);
+      ctx.lineTo(-12, 10);
+      ctx.closePath();
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawRock(rock) {
+      ctx.strokeStyle = "#aaa";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (let i = 0; i < 9; i += 1) {
+        const angle = (Math.PI * 2 * i) / 9;
+        const radius = rock.radius * (0.78 + (i % 3) * 0.11);
+        const x = rock.x + Math.cos(angle) * radius;
+        const y = rock.y + Math.sin(angle) * radius;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+      ctx.stroke();
+    }
+
+    function draw() {
+      ctx.fillStyle = "#000";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      drawShip();
+      rocks.forEach(drawRock);
+
+      ctx.fillStyle = "#fff";
+      bullets.forEach(bullet => {
+        ctx.beginPath();
+        ctx.arc(bullet.x, bullet.y, 2, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      if (ended) {
+        ctx.fillStyle = "rgba(0, 0, 0, 0.72)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#fff";
+        ctx.font = "30px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText("Game Over", canvas.width / 2, canvas.height / 2 - 8);
+        ctx.font = "16px Arial";
+        ctx.fillText("Press Restart to play again", canvas.width / 2, canvas.height / 2 + 24);
+      }
+
+    }
+
+    function loop() {
+      update();
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    document.addEventListener("keydown", event => {
+      if (event.key === " ") event.preventDefault();
+      keys.add(event.key);
+    });
+
+    document.addEventListener("keyup", event => {
+      keys.delete(event.key);
+    });
+
+    restartBtn.addEventListener("click", reset);
+    reset();
+    loop();
+  </script>
+</body>
+</html>

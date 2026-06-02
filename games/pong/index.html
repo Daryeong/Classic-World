@@ -1,0 +1,211 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Daily Classic Game</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: #151515;
+      color: #f4f0e8;
+      font-family: Arial, sans-serif;
+    }
+
+    main {
+      width: min(92vw, 720px);
+    }
+
+    h1 {
+      margin: 0 0 12px;
+      font-size: 24px;
+      font-weight: 700;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      background: #0b0b0b;
+      border: 2px solid #f4f0e8;
+    }
+
+    p {
+      margin: 12px 0 0;
+      color: #c9c1b2;
+      font-size: 14px;
+    }
+  
+    .classic-world-menu-link {
+      position: fixed;
+      top: 14px;
+      left: 14px;
+      z-index: 9999;
+      display: inline-flex;
+      align-items: center;
+      min-height: 38px;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      border-radius: 8px;
+      padding: 9px 12px;
+      background: rgba(12, 13, 16, 0.88);
+      color: #fff;
+      font: 700 14px/1 Arial, sans-serif;
+      text-decoration: none;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    }
+
+    .classic-world-menu-link:hover,
+    .classic-world-menu-link:focus-visible {
+      background: #f3c15f;
+      color: #111;
+      outline: none;
+    }
+  </style>
+</head>
+<body>
+    <a class="classic-world-menu-link" href="../index.html" aria-label="Back to menu">Back to Menu</a>
+  <main>
+    <h1>Pong</h1>
+    <canvas id="game" width="640" height="480" aria-label="Pong game screen"></canvas>
+    <p>Move with Up/Down or W/S. Press Space to restart.</p>
+  </main>
+
+  <script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    const keys = new Set();
+
+    const player = { x: 24, y: 190, width: 12, height: 80, score: 0 };
+    const cpu = { x: 604, y: 190, width: 12, height: 80, score: 0 };
+    const ball = { x: 320, y: 240, radius: 7, vx: 4, vy: 3 };
+    const winningScore = 5;
+    let state = 'playing';
+
+    function serve(direction) {
+      ball.x = canvas.width / 2;
+      ball.y = canvas.height / 2;
+      ball.vx = direction * 4;
+      ball.vy = Math.random() > 0.5 ? 3 : -3;
+    }
+
+    function reset() {
+      player.y = 190;
+      cpu.y = 190;
+      player.score = 0;
+      cpu.score = 0;
+      state = 'playing';
+      serve(Math.random() > 0.5 ? 1 : -1);
+    }
+
+    function movePaddle(paddle, amount) {
+      paddle.y = Math.max(0, Math.min(canvas.height - paddle.height, paddle.y + amount));
+    }
+
+    function hits(paddle) {
+      return ball.x + ball.radius >= paddle.x &&
+        ball.x - ball.radius <= paddle.x + paddle.width &&
+        ball.y + ball.radius >= paddle.y &&
+        ball.y - ball.radius <= paddle.y + paddle.height;
+    }
+
+    function bounceFrom(paddle, direction) {
+      const middle = paddle.y + paddle.height / 2;
+      const offset = (ball.y - middle) / (paddle.height / 2);
+      ball.vx = direction * Math.min(7, Math.abs(ball.vx) + 0.3);
+      ball.vy = offset * 5;
+    }
+
+    function update() {
+      if (state !== 'playing') return;
+
+      if (keys.has('ArrowUp') || keys.has('KeyW')) movePaddle(player, -6);
+      if (keys.has('ArrowDown') || keys.has('KeyS')) movePaddle(player, 6);
+
+      const cpuCenter = cpu.y + cpu.height / 2;
+      if (cpuCenter < ball.y - 8) movePaddle(cpu, 4);
+      if (cpuCenter > ball.y + 8) movePaddle(cpu, -4);
+
+      ball.x += ball.vx;
+      ball.y += ball.vy;
+
+      if (ball.y < ball.radius || ball.y > canvas.height - ball.radius) ball.vy *= -1;
+      if (ball.vx < 0 && hits(player)) bounceFrom(player, 1);
+      if (ball.vx > 0 && hits(cpu)) bounceFrom(cpu, -1);
+
+      if (ball.x < -ball.radius) {
+        cpu.score += 1;
+        serve(-1);
+      }
+
+      if (ball.x > canvas.width + ball.radius) {
+        player.score += 1;
+        serve(1);
+      }
+
+      if (player.score >= winningScore) state = 'won';
+      if (cpu.score >= winningScore) state = 'lost';
+    }
+
+    function drawCenterLine() {
+      ctx.fillStyle = '#5d5952';
+      for (let y = 8; y < canvas.height; y += 24) {
+        ctx.fillRect(canvas.width / 2 - 1, y, 2, 12);
+      }
+    }
+
+    function drawEndText(text) {
+      ctx.fillStyle = '#f4f0e8';
+      ctx.font = 'bold 28px Arial, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+      ctx.font = '16px Arial, sans-serif';
+      ctx.fillText('Press Space to restart', canvas.width / 2, canvas.height / 2 + 32);
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawCenterLine();
+
+      ctx.fillStyle = '#f4f0e8';
+      ctx.fillRect(player.x, player.y, player.width, player.height);
+      ctx.fillRect(cpu.x, cpu.y, cpu.width, cpu.height);
+      ctx.beginPath();
+      ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.font = '32px Arial, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(player.score, canvas.width / 2 - 48, 42);
+      ctx.fillText(cpu.score, canvas.width / 2 + 48, 42);
+
+      if (state === 'won') drawEndText('You win');
+      if (state === 'lost') drawEndText('CPU wins');
+    }
+
+    function frame() {
+      update();
+      draw();
+      requestAnimationFrame(frame);
+    }
+
+    window.addEventListener('keydown', (event) => {
+      keys.add(event.code);
+      if (event.code === 'Space' && state !== 'playing') reset();
+    });
+
+    window.addEventListener('keyup', (event) => {
+      keys.delete(event.code);
+    });
+
+    reset();
+    frame();
+  </script>
+</body>
+</html>

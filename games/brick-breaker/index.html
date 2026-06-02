@@ -1,0 +1,269 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Classic Breakout</title>
+  <style>
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+    }
+
+    body {
+      align-items: center;
+      background: #151719;
+      color: #f4f1e8;
+      display: flex;
+      font-family: Arial, Helvetica, sans-serif;
+      justify-content: center;
+    }
+
+    main {
+      width: min(92vw, 720px);
+    }
+
+    header {
+      align-items: center;
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    h1 {
+      font-size: 20px;
+      margin: 0;
+    }
+
+    .stats {
+      font-size: 14px;
+    }
+
+    canvas {
+      background: #0b0d0e;
+      border: 2px solid #d8c170;
+      box-sizing: border-box;
+      display: block;
+      width: 100%;
+    }
+
+    p {
+      color: #c9c3b0;
+      font-size: 13px;
+      margin: 10px 0 0;
+    }
+  
+    .classic-world-menu-link {
+      position: fixed;
+      top: 14px;
+      left: 14px;
+      z-index: 9999;
+      display: inline-flex;
+      align-items: center;
+      min-height: 38px;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      border-radius: 8px;
+      padding: 9px 12px;
+      background: rgba(12, 13, 16, 0.88);
+      color: #fff;
+      font: 700 14px/1 Arial, sans-serif;
+      text-decoration: none;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    }
+
+    .classic-world-menu-link:hover,
+    .classic-world-menu-link:focus-visible {
+      background: #f3c15f;
+      color: #111;
+      outline: none;
+    }
+  </style>
+</head>
+<body>
+    <a class="classic-world-menu-link" href="../index.html" aria-label="Back to menu">Back to Menu</a>
+  <main>
+    <header>
+      <h1>Classic Breakout</h1>
+      <div class="stats">Score: <span id="score">0</span> | Lives: <span id="lives">3</span></div>
+    </header>
+    <canvas id="game" width="720" height="480" aria-label="Classic Breakout game"></canvas>
+    <p>Move with Left/Right or A/D. Press Space to launch or restart.</p>
+  </main>
+
+  <script>
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+    const scoreEl = document.getElementById("score");
+    const livesEl = document.getElementById("lives");
+
+    const paddle = { x: 300, y: 444, width: 120, height: 14, speed: 7 };
+    const ball = { x: 360, y: 426, radius: 8, dx: 4, dy: -4, moving: false };
+    const keys = { left: false, right: false };
+    const bricks = [];
+    let score = 0;
+    let lives = 3;
+    let state = "ready";
+
+    function buildBricks() {
+      bricks.length = 0;
+      for (let row = 0; row < 5; row += 1) {
+        for (let col = 0; col < 10; col += 1) {
+          bricks.push({
+            x: 36 + col * 66,
+            y: 48 + row * 26,
+            width: 54,
+            height: 16,
+            active: true
+          });
+        }
+      }
+    }
+
+    function updateStats() {
+      scoreEl.textContent = score;
+      livesEl.textContent = lives;
+    }
+
+    function resetBall() {
+      paddle.x = 300;
+      ball.x = paddle.x + paddle.width / 2;
+      ball.y = paddle.y - ball.radius - 2;
+      ball.dx = 4;
+      ball.dy = -4;
+      ball.moving = false;
+    }
+
+    function restart() {
+      score = 0;
+      lives = 3;
+      state = "ready";
+      buildBricks();
+      resetBall();
+      updateStats();
+    }
+
+    function drawOverlay(message, subtext) {
+      ctx.fillStyle = "rgba(11, 13, 14, 0.74)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "#f4f1e8";
+      ctx.font = "28px Arial, Helvetica, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(message, canvas.width / 2, 232);
+      ctx.font = "15px Arial, Helvetica, sans-serif";
+      ctx.fillStyle = "#d8c170";
+      ctx.fillText(subtext, canvas.width / 2, 262);
+      ctx.textAlign = "left";
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "#d8c170";
+      ctx.fillRect(paddle.x, paddle.y, paddle.width, paddle.height);
+
+      ctx.beginPath();
+      ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+      ctx.fillStyle = "#f4f1e8";
+      ctx.fill();
+
+      for (const brick of bricks) {
+        if (!brick.active) continue;
+        ctx.fillStyle = "#b84f3c";
+        ctx.fillRect(brick.x, brick.y, brick.width, brick.height);
+      }
+
+      if (state === "ready") drawOverlay("Ready", "Press Space to launch");
+      if (state === "won") drawOverlay("You cleared the wall", "Press Space to restart");
+      if (state === "lost") drawOverlay("Game over", "Press Space to restart");
+    }
+
+    function hitBrick(brick) {
+      return brick.active &&
+        ball.x + ball.radius > brick.x &&
+        ball.x - ball.radius < brick.x + brick.width &&
+        ball.y + ball.radius > brick.y &&
+        ball.y - ball.radius < brick.y + brick.height;
+    }
+
+    function step() {
+      if (keys.left) paddle.x -= paddle.speed;
+      if (keys.right) paddle.x += paddle.speed;
+      paddle.x = Math.max(0, Math.min(canvas.width - paddle.width, paddle.x));
+
+      if (!ball.moving) {
+        ball.x = paddle.x + paddle.width / 2;
+        ball.y = paddle.y - ball.radius - 2;
+        draw();
+        requestAnimationFrame(step);
+        return;
+      }
+
+      ball.x += ball.dx;
+      ball.y += ball.dy;
+
+      if (ball.x < ball.radius || ball.x > canvas.width - ball.radius) ball.dx *= -1;
+      if (ball.y < ball.radius) ball.dy *= -1;
+
+      const paddleHit = ball.y + ball.radius >= paddle.y &&
+        ball.y - ball.radius <= paddle.y + paddle.height &&
+        ball.x >= paddle.x &&
+        ball.x <= paddle.x + paddle.width &&
+        ball.dy > 0;
+
+      if (paddleHit) {
+        const offset = (ball.x - (paddle.x + paddle.width / 2)) / (paddle.width / 2);
+        ball.dx = offset * 5;
+        ball.dy = -Math.abs(ball.dy);
+      }
+
+      for (const brick of bricks) {
+        if (!hitBrick(brick)) continue;
+        brick.active = false;
+        ball.dy *= -1;
+        score += 10;
+        updateStats();
+        break;
+      }
+
+      if (bricks.every((brick) => !brick.active)) {
+        state = "won";
+        ball.moving = false;
+      }
+
+      if (ball.y > canvas.height + ball.radius) {
+        lives -= 1;
+        updateStats();
+        if (lives <= 0) {
+          state = "lost";
+          ball.moving = false;
+        } else {
+          state = "ready";
+          resetBall();
+        }
+      }
+
+      draw();
+      requestAnimationFrame(step);
+    }
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "ArrowLeft" || event.key.toLowerCase() === "a") keys.left = true;
+      if (event.key === "ArrowRight" || event.key.toLowerCase() === "d") keys.right = true;
+      if (event.code === "Space") {
+        event.preventDefault();
+        if (state === "won" || state === "lost") restart();
+        state = "playing";
+        ball.moving = true;
+      }
+    });
+
+    document.addEventListener("keyup", (event) => {
+      if (event.key === "ArrowLeft" || event.key.toLowerCase() === "a") keys.left = false;
+      if (event.key === "ArrowRight" || event.key.toLowerCase() === "d") keys.right = false;
+    });
+
+    restart();
+    step();
+  </script>
+</body>
+</html>

@@ -1,0 +1,257 @@
+﻿<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Road Crossing</title>
+  <style>
+    html,
+    body {
+      margin: 0;
+      height: 100%;
+      background: #202124;
+      color: #f1f3f4;
+      font-family: Arial, sans-serif;
+      display: grid;
+      place-items: center;
+    }
+
+    main {
+      text-align: center;
+    }
+
+    canvas {
+      background: #2f3530;
+      border: 2px solid #f1f3f4;
+      display: block;
+      max-width: 95vw;
+      max-height: 76vh;
+    }
+
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    button {
+      background: #3f4247;
+      border: 1px solid #f1f3f4;
+      color: #f1f3f4;
+      cursor: pointer;
+      font: inherit;
+      padding: 6px 10px;
+    }
+
+    button[aria-pressed="true"] {
+      background: #347a47;
+    }
+
+    p {
+      margin: 10px 0 0;
+      font-size: 14px;
+    }
+  
+    .classic-world-menu-link {
+      position: fixed;
+      top: 14px;
+      left: 14px;
+      z-index: 9999;
+      display: inline-flex;
+      align-items: center;
+      min-height: 38px;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      border-radius: 8px;
+      padding: 9px 12px;
+      background: rgba(12, 13, 16, 0.88);
+      color: #fff;
+      font: 700 14px/1 Arial, sans-serif;
+      text-decoration: none;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    }
+
+    .classic-world-menu-link:hover,
+    .classic-world-menu-link:focus-visible {
+      background: #f3c15f;
+      color: #111;
+      outline: none;
+    }
+  </style>
+</head>
+<body>
+  <a class="classic-world-menu-link" href="../index.html" aria-label="Back to menu">Back to Menu</a>
+  <main>
+    <canvas id="game" width="420" height="480" aria-label="Road Crossing game"></canvas>
+    <div class="controls" aria-label="Difficulty">
+      <button type="button" data-difficulty="easy" data-speed="0.75">Easy</button>
+      <button type="button" data-difficulty="normal" data-speed="1.15" aria-pressed="true">Normal</button>
+      <button type="button" data-difficulty="hard" data-speed="1.35">Hard</button>
+    </div>
+    <p>Use the arrow keys to move. Reach the green goal at the top.</p>
+  </main>
+
+  <script>
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+    const player = { x: 200, y: 415, size: 30, speed: 185 };
+    const start = { x: player.x, y: player.y };
+    const keys = new Set();
+    const roadRows = [3, 5, 7, 8];
+    const cars = [
+      { x: 0, y: 125, w: 70, h: 30, speed: 130, axis: "x" },
+      { x: 180, y: 205, w: 80, h: 30, speed: -150, axis: "x" },
+      { x: 300, y: 285, w: 70, h: 30, speed: 170, axis: "x" },
+      { x: 80, y: 325, w: 90, h: 30, speed: -120, axis: "x" }
+    ];
+    const normalCars = [
+      { x: 255, y: 125, w: 75, h: 30, speed: 155, axis: "x" },
+      { x: 40, y: 245, w: 70, h: 30, speed: -145, axis: "x" }
+    ];
+    const hardCars = [
+      { x: 220, y: 120, w: 65, h: 30, speed: -185, axis: "x" },
+      { x: 20, y: 285, w: 75, h: 30, speed: 190, axis: "x" },
+      { x: 95, y: 40, w: 30, h: 65, speed: 145, axis: "y" },
+      { x: 335, y: 245, w: 30, h: 75, speed: -155, axis: "y" }
+    ];
+    let speedScale = 1;
+    let difficulty = "normal";
+    let message = "Crash!";
+    let lastTime = performance.now();
+
+    function reset() {
+      player.x = start.x;
+      player.y = start.y;
+    }
+
+    function rectsOverlap(a, b) {
+      return a.x < b.x + b.w &&
+        a.x + a.w > b.x &&
+        a.y < b.y + b.h &&
+        a.y + a.h > b.y;
+    }
+
+    function setDifficulty(button) {
+      speedScale = Number(button.dataset.speed);
+      difficulty = button.dataset.difficulty;
+      for (const item of document.querySelectorAll("button[data-difficulty]")) {
+        item.setAttribute("aria-pressed", String(item === button));
+      }
+    }
+
+    document.querySelector(".controls").addEventListener("click", (event) => {
+      if (event.target.matches("button[data-difficulty]")) {
+        setDifficulty(event.target);
+      }
+    });
+
+    window.addEventListener("keydown", (event) => {
+      if (event.key.startsWith("Arrow")) {
+        event.preventDefault();
+        keys.add(event.key);
+        message = "Crash!";
+      }
+    });
+
+    window.addEventListener("keyup", (event) => {
+      keys.delete(event.key);
+    });
+
+    function updatePlayer(dt) {
+      let dx = 0;
+      let dy = 0;
+
+      if (keys.has("ArrowLeft")) dx -= 1;
+      if (keys.has("ArrowRight")) dx += 1;
+      if (keys.has("ArrowUp")) dy -= 1;
+      if (keys.has("ArrowDown")) dy += 1;
+
+      if (dx !== 0 && dy !== 0) {
+        dx *= Math.SQRT1_2;
+        dy *= Math.SQRT1_2;
+      }
+
+      player.x += dx * player.speed * dt;
+      player.y += dy * player.speed * dt;
+      player.x = Math.max(0, Math.min(canvas.width - player.size - 10, player.x));
+      player.y = Math.max(0, Math.min(canvas.height - player.size - 10, player.y));
+
+      if (player.y <= 8) {
+        message = "Crash!";
+        reset();
+      }
+    }
+
+    function updateCars(dt) {
+      for (const car of currentCars()) {
+        if (car.axis === "y") {
+          car.y += car.speed * speedScale * dt;
+          if (car.speed > 0 && car.y > canvas.height) car.y = -car.h;
+          if (car.speed < 0 && car.y + car.h < 0) car.y = canvas.height;
+        } else {
+          car.x += car.speed * speedScale * dt;
+          if (car.speed > 0 && car.x > canvas.width) car.x = -car.w;
+          if (car.speed < 0 && car.x + car.w < 0) car.x = canvas.width;
+        }
+
+        if (rectsOverlap(
+          { x: player.x + 5, y: player.y + 5, w: player.size, h: player.size },
+          car
+        )) {
+          message = "Crash!";
+          reset();
+        }
+      }
+    }
+
+    function currentCars() {
+      if (difficulty === "easy") return cars;
+      if (difficulty === "normal") return cars.concat(normalCars);
+      return cars.concat(normalCars, hardCars);
+    }
+
+    function update(now) {
+      const dt = Math.min((now - lastTime) / 1000, 0.05);
+      lastTime = now;
+      updatePlayer(dt);
+      updateCars(dt);
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = "#347a47";
+      ctx.fillRect(0, 0, canvas.width, 40);
+      ctx.fillRect(0, 400, canvas.width, 40);
+
+      ctx.fillStyle = "#3f4247";
+      for (const y of roadRows) {
+        ctx.fillRect(0, y * 40, canvas.width, 40);
+      }
+
+      ctx.fillStyle = "#d7dee8";
+      for (const car of currentCars()) {
+        ctx.fillRect(car.x, car.y, car.w, car.h);
+      }
+
+      ctx.fillStyle = "#f4d35e";
+      ctx.fillRect(player.x + 5, player.y + 5, player.size, player.size);
+
+      if (message) {
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "24px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText(message, canvas.width / 2, canvas.height / 2);
+      }
+    }
+
+    function loop(now) {
+      update(now);
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

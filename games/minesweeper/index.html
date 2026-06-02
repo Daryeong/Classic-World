@@ -1,0 +1,315 @@
+﻿<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Minesweeper</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #202124;
+      color: #f1f3f4;
+    }
+
+    main {
+      width: min(94vw, 430px);
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 24px;
+      font-weight: 700;
+    }
+
+    .stats {
+      display: flex;
+      gap: 8px;
+      font-size: 14px;
+      color: #c7c7c7;
+    }
+
+    button,
+    select {
+      font: inherit;
+    }
+
+    #difficulty,
+    #reset {
+      border: 1px solid #5f6368;
+      border-radius: 6px;
+      padding: 7px 11px;
+      background: #303134;
+      color: #f1f3f4;
+    }
+
+    #reset {
+      cursor: pointer;
+    }
+
+    #reset:hover {
+      background: #3c4043;
+    }
+
+    #board {
+      display: grid;
+      grid-template-columns: repeat(9, minmax(0, 1fr));
+      gap: 4px;
+      width: 100%;
+      aspect-ratio: 1;
+    }
+
+    .cell {
+      display: grid;
+      place-items: center;
+      min-width: 0;
+      min-height: 0;
+      width: 100%;
+      aspect-ratio: 1;
+      border: 0;
+      border-radius: 4px;
+      padding: 0;
+      background: #5f6368;
+      color: #ffffff;
+      font-weight: 800;
+      font-size: clamp(10px, 4vw, 22px);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .cell:hover:not(:disabled) {
+      background: #70757a;
+    }
+
+    .cell:disabled {
+      cursor: default;
+    }
+
+    .open {
+      background: #e8eaed;
+      color: #202124;
+    }
+
+    .mine {
+      background: #d93025;
+      color: #ffffff;
+    }
+
+    .flag {
+      background: #fbbc04;
+      color: #202124;
+    }
+
+    #status {
+      min-height: 24px;
+      margin-top: 12px;
+      color: #c7c7c7;
+      font-size: 15px;
+    }
+  
+    .classic-world-menu-link {
+      position: fixed;
+      top: 14px;
+      left: 14px;
+      z-index: 9999;
+      display: inline-flex;
+      align-items: center;
+      min-height: 38px;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      border-radius: 8px;
+      padding: 9px 12px;
+      background: rgba(12, 13, 16, 0.88);
+      color: #fff;
+      font: 700 14px/1 Arial, sans-serif;
+      text-decoration: none;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    }
+
+    .classic-world-menu-link:hover,
+    .classic-world-menu-link:focus-visible {
+      background: #f3c15f;
+      color: #111;
+      outline: none;
+    }
+  </style>
+</head>
+<body>
+  <a class="classic-world-menu-link" href="../index.html" aria-label="Back to menu">Back to Menu</a>
+  <main>
+    <header>
+      <div>
+        <h1>Minesweeper</h1>
+        <div class="stats">
+          <span>Mines <strong id="mine-count">10</strong></span>
+          <span>Flags <strong id="flag-count">0</strong></span>
+        </div>
+      </div>
+      <div>
+        <select id="difficulty" aria-label="Difficulty">
+          <option value="easy">Easy</option>
+          <option value="normal">Normal</option>
+          <option value="hard">Hard</option>
+        </select>
+        <button id="reset" type="button">New Game</button>
+      </div>
+    </header>
+
+    <section id="board" aria-label="Minesweeper board"></section>
+    <p id="status">Click a tile to open it. Right-click to place a flag.</p>
+  </main>
+
+  <script>
+    const levels = {
+      easy: { size: 9, mines: 10 },
+      normal: { size: 12, mines: 22 },
+      hard: { size: 16, mines: 45 }
+    };
+    const board = document.getElementById("board");
+    const statusText = document.getElementById("status");
+    const mineCount = document.getElementById("mine-count");
+    const flagCount = document.getElementById("flag-count");
+    const difficulty = document.getElementById("difficulty");
+    const reset = document.getElementById("reset");
+
+    let size = levels.easy.size;
+    let mineTotal = levels.easy.mines;
+    let cells = [];
+    let gameOver = false;
+
+    function startGame() {
+      const level = levels[difficulty.value];
+      size = level.size;
+      mineTotal = level.mines;
+      gameOver = false;
+      board.style.gridTemplateColumns = `repeat(${size}, minmax(0, 1fr))`;
+      mineCount.textContent = mineTotal;
+      cells = Array.from({ length: size * size }, (_, index) => ({
+        index,
+        mine: false,
+        open: false,
+        flag: false,
+        count: 0
+      }));
+
+      let placed = 0;
+      while (placed < mineTotal) {
+        const index = Math.floor(Math.random() * cells.length);
+        if (!cells[index].mine) {
+          cells[index].mine = true;
+          placed += 1;
+        }
+      }
+
+      cells.forEach((cell) => {
+        cell.count = neighbors(cell.index).filter((neighbor) => neighbor.mine).length;
+      });
+
+      render();
+      statusText.textContent = "Click a tile to open it. Right-click to place a flag.";
+    }
+
+    function neighbors(index) {
+      const row = Math.floor(index / size);
+      const col = index % size;
+      const result = [];
+
+      for (let y = row - 1; y <= row + 1; y += 1) {
+        for (let x = col - 1; x <= col + 1; x += 1) {
+          if (y === row && x === col) continue;
+          if (y >= 0 && y < size && x >= 0 && x < size) {
+            result.push(cells[y * size + x]);
+          }
+        }
+      }
+
+      return result;
+    }
+
+    function openCell(index) {
+      const cell = cells[index];
+      if (gameOver || cell.open || cell.flag) return;
+
+      cell.open = true;
+      if (cell.mine) {
+        endGame(false);
+        return;
+      }
+
+      if (cell.count === 0) {
+        neighbors(index).forEach((neighbor) => openCell(neighbor.index));
+      }
+
+      if (cells.every((item) => item.mine || item.open)) {
+        endGame(true);
+        return;
+      }
+
+      render();
+    }
+
+    function toggleFlag(index) {
+      const cell = cells[index];
+      if (gameOver || cell.open) return;
+      cell.flag = !cell.flag;
+      render();
+    }
+
+    function endGame(won) {
+      gameOver = true;
+      cells.forEach((cell) => {
+        if (cell.mine) cell.open = true;
+      });
+      statusText.textContent = won ? "You win! Every safe tile is open." : "Game over! You hit a mine.";
+      render();
+    }
+
+    function render() {
+      board.innerHTML = "";
+      flagCount.textContent = cells.filter((cell) => cell.flag).length;
+
+      cells.forEach((cell) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "cell";
+        button.setAttribute("aria-label", `Tile ${cell.index + 1}`);
+
+        if (cell.open) {
+          button.disabled = true;
+          button.classList.add(cell.mine ? "mine" : "open");
+          button.textContent = cell.mine ? "*" : cell.count || "";
+        } else if (cell.flag) {
+          button.classList.add("flag");
+          button.textContent = "!";
+        }
+
+        button.addEventListener("click", () => openCell(cell.index));
+        button.addEventListener("contextmenu", (event) => {
+          event.preventDefault();
+          toggleFlag(cell.index);
+        });
+
+        board.appendChild(button);
+      });
+    }
+
+    reset.addEventListener("click", startGame);
+    difficulty.addEventListener("change", startGame);
+    startGame();
+  </script>
+</body>
+</html>
