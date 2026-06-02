@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="ko">
 <head>
   <meta charset="utf-8">
@@ -24,15 +24,8 @@
       margin-bottom: 12px;
     }
     h1 { margin: 0; font-size: 24px; }
-    .controls { margin-top: 6px; color: #aeb9c6; font-size: 14px; }
-    .hud { display: flex; gap: 14px; align-items: center; color: #cbd5df; font-size: 14px; }
-    canvas {
-      display: block;
-      width: 100%;
-      aspect-ratio: 4 / 3;
-      background: #070a0d;
-      border: 1px solid #2b3540;
-    }
+    .controls { margin-top: 6px; color: #aeb9c6; font-size: 14px; line-height: 1.4; }
+    .hud { display: flex; align-items: center; gap: 14px; color: #cbd5df; font-size: 14px; white-space: nowrap; }
     button {
       border: 1px solid #526170;
       background: #1d252d;
@@ -41,7 +34,14 @@
       font: inherit;
       cursor: pointer;
     }
-  
+    canvas {
+      display: block;
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      background: #070a0d;
+      border: 1px solid #2b3540;
+    }
+
     .classic-world-menu-link {
       position: fixed;
       top: 14px;
@@ -69,17 +69,17 @@
   </style>
 </head>
 <body>
-    <a class="classic-world-menu-link" href="../index.html" aria-label="Back to menu">Back to Menu</a>
+  <a class="classic-world-menu-link" href="../index.html" aria-label="Back to menu">Back to Menu</a>
   <main>
     <header>
       <div>
         <h1>Cosmic Defense</h1>
-        <div class="controls">Arrow keys to move, Space to fire, Enter to restart</div>
+        <div class="controls">← → 이동, Space 발사, Enter 재시작</div>
       </div>
       <div class="hud">
-        <span>Score <strong id="score">0</strong></span>
-        <span>Lives <strong id="lives">3</strong></span>
-        <button id="restart" type="button">Restart</button>
+        <span>점수 <strong id="score">0</strong></span>
+        <span>목숨 <strong id="lives">3</strong></span>
+        <button id="restart" type="button">재시작</button>
       </div>
     </header>
     <canvas id="game" width="720" height="540" aria-label="Cosmic Defense game"></canvas>
@@ -92,35 +92,34 @@
     const livesEl = document.getElementById("lives");
     const restartBtn = document.getElementById("restart");
     const keys = new Set();
-    const enemyShotInterval = 26;
-    const enemyShotSpeed = 6;
 
     let player;
-    let invaders;
+    let enemies;
     let shots;
     let enemyShots;
     let score;
     let lives;
     let direction;
-    let lastEnemyShot;
+    let enemyTimer;
     let status;
 
     function reset() {
       player = { x: 340, y: 490, w: 40, h: 16, cooldown: 0 };
-      invaders = [];
+      enemies = [];
       shots = [];
       enemyShots = [];
       score = 0;
       lives = 3;
       direction = 1;
-      lastEnemyShot = 0;
+      enemyTimer = 0;
       status = "playing";
 
       for (let row = 0; row < 4; row += 1) {
         for (let col = 0; col < 9; col += 1) {
-          invaders.push({ x: 82 + col * 58, y: 64 + row * 42, w: 30, h: 20, alive: true });
+          enemies.push({ x: 82 + col * 58, y: 64 + row * 42, w: 30, h: 20, alive: true });
         }
       }
+
       updateHud();
     }
 
@@ -129,12 +128,12 @@
       livesEl.textContent = lives;
     }
 
-    function rectsTouch(a, b) {
+    function hit(a, b) {
       return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
     }
 
     function shoot() {
-      if (player.cooldown > 0 || status !== "playing") return;
+      if (player.cooldown || status !== "playing") return;
       shots.push({ x: player.x + player.w / 2 - 2, y: player.y - 12, w: 4, h: 12 });
       player.cooldown = 18;
     }
@@ -148,34 +147,34 @@
       player.x = Math.max(12, Math.min(canvas.width - player.w - 12, player.x));
       player.cooldown = Math.max(0, player.cooldown - 1);
 
-      let edge = false;
-      for (const invader of invaders) {
-        if (!invader.alive) continue;
-        invader.x += direction * 1.1;
-        edge = edge || invader.x < 24 || invader.x + invader.w > canvas.width - 24;
+      let touchedEdge = false;
+      for (const enemy of enemies) {
+        if (!enemy.alive) continue;
+        enemy.x += direction * 1.15;
+        touchedEdge = touchedEdge || enemy.x < 24 || enemy.x + enemy.w > canvas.width - 24;
       }
-      if (edge) {
+      if (touchedEdge) {
         direction *= -1;
-        for (const invader of invaders) invader.y += 16;
+        for (const enemy of enemies) enemy.y += 16;
       }
 
       for (const shot of shots) shot.y -= 7;
-      for (const shot of enemyShots) shot.y += enemyShotSpeed;
+      for (const shot of enemyShots) shot.y += 6;
       shots = shots.filter((shot) => shot.y + shot.h > 0);
       enemyShots = enemyShots.filter((shot) => shot.y < canvas.height);
 
-      lastEnemyShot += 1;
-      const living = invaders.filter((invader) => invader.alive);
-      if (living.length && lastEnemyShot > enemyShotInterval) {
+      enemyTimer += 1;
+      const living = enemies.filter((enemy) => enemy.alive);
+      if (living.length && enemyTimer > 26) {
         const enemy = living[Math.floor(Math.random() * living.length)];
         enemyShots.push({ x: enemy.x + enemy.w / 2 - 4, y: enemy.y + enemy.h, w: 8, h: 14 });
-        lastEnemyShot = 0;
+        enemyTimer = 0;
       }
 
       for (const shot of shots) {
-        for (const invader of invaders) {
-          if (invader.alive && rectsTouch(shot, invader)) {
-            invader.alive = false;
+        for (const enemy of enemies) {
+          if (enemy.alive && hit(shot, enemy)) {
+            enemy.alive = false;
             shot.y = -100;
             score += 10;
             updateHud();
@@ -185,7 +184,7 @@
       }
 
       for (const shot of enemyShots) {
-        if (rectsTouch(shot, player)) {
+        if (hit(shot, player)) {
           shot.y = canvas.height + 100;
           lives -= 1;
           updateHud();
@@ -193,17 +192,17 @@
         }
       }
 
-      if (living.some((invader) => invader.y + invader.h >= player.y)) status = "gameover";
-      if (invaders.every((invader) => !invader.alive)) status = "win";
+      if (living.some((enemy) => enemy.y + enemy.h >= player.y)) status = "gameover";
+      if (enemies.every((enemy) => !enemy.alive)) status = "win";
     }
 
-    function drawMessage(message, detail) {
+    function message(title, detail) {
       ctx.fillStyle = "rgba(7, 10, 13, 0.74)";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.fillStyle = "#f4f7fb";
       ctx.font = "700 34px Arial";
       ctx.textAlign = "center";
-      ctx.fillText(message, canvas.width / 2, canvas.height / 2 - 10);
+      ctx.fillText(title, canvas.width / 2, canvas.height / 2 - 10);
       ctx.font = "16px Arial";
       ctx.fillStyle = "#cbd5df";
       ctx.fillText(detail, canvas.width / 2, canvas.height / 2 + 24);
@@ -211,16 +210,17 @@
 
     function draw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+
       ctx.fillStyle = "#9be36f";
       ctx.fillRect(player.x, player.y, player.w, player.h);
       ctx.fillRect(player.x + 16, player.y - 10, 8, 10);
 
       ctx.fillStyle = "#60a5fa";
-      for (const invader of invaders) {
-        if (!invader.alive) continue;
-        ctx.fillRect(invader.x, invader.y, invader.w, invader.h);
-        ctx.clearRect(invader.x + 6, invader.y + 6, 5, 5);
-        ctx.clearRect(invader.x + 19, invader.y + 6, 5, 5);
+      for (const enemy of enemies) {
+        if (!enemy.alive) continue;
+        ctx.fillRect(enemy.x, enemy.y, enemy.w, enemy.h);
+        ctx.clearRect(enemy.x + 6, enemy.y + 6, 5, 5);
+        ctx.clearRect(enemy.x + 19, enemy.y + 6, 5, 5);
       }
 
       ctx.fillStyle = "#f8fafc";
@@ -228,8 +228,8 @@
       ctx.fillStyle = "#f97373";
       for (const shot of enemyShots) ctx.fillRect(shot.x, shot.y, shot.w, shot.h);
 
-      if (status === "gameover") drawMessage("Game Over", "Press Enter or Restart to play again");
-      if (status === "win") drawMessage("You Win", "Press Enter or Restart to play again");
+      if (status === "gameover") message("게임 오버", "Enter 또는 재시작 버튼으로 다시 시작");
+      if (status === "win") message("승리", "Enter 또는 재시작 버튼으로 다시 시작");
     }
 
     function loop() {
