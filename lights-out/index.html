@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lights Out</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #111; color: #eee; font-family: Arial, sans-serif; }
+    main { width: min(92vw, 360px); text-align: center; }
+    .board { display: grid; grid-template-columns: repeat(5, 1fr); gap: 7px; }
+    button.light { aspect-ratio: 1; border: 1px solid #444; background: #242424; cursor: pointer; }
+    .on { background: #f3c15f !important; box-shadow: 0 0 18px rgba(243,193,95,.55); }
+    p { color: #ccc; }
+    .classic-world-menu-link { position: fixed; top: 14px; left: 14px; z-index: 9999; border: 1px solid rgba(255,255,255,.35); border-radius: 8px; padding: 9px 12px; background: rgba(12,13,16,.88); color: #fff; font: 700 14px/1 Arial,sans-serif; text-decoration: none; }
+    .classic-world-menu-link:hover, .classic-world-menu-link:focus-visible { background: #f3c15f; color: #111; outline: none; }
+  </style>
+</head>
+<body>
+  <a class="classic-world-menu-link" href="../index.html">Back to Menu</a>
+  <main>
+    <h1>Lights Out</h1>
+    <div class="board" id="board"></div>
+    <p id="status">Turn every light off. R: restart.</p>
+  </main>
+  <script>
+    const boardEl = document.getElementById("board");
+    const statusEl = document.getElementById("status");
+    let lights, moves;
+
+    function reset() {
+      lights = Array(25).fill(false);
+      moves = 0;
+      [2, 4, 7, 11, 13, 16, 18, 22].forEach(toggleAt);
+      moves = 0;
+      statusEl.textContent = "Turn every light off. R: restart.";
+      draw();
+    }
+
+    function toggleAt(i) {
+      if (i >= 0 && i < 25) lights[i] = !lights[i];
+    }
+
+    function press(i) {
+      const x = i % 5, y = Math.floor(i / 5);
+      [[0,0],[1,0],[-1,0],[0,1],[0,-1]].forEach(([dx, dy]) => {
+        const nx = x + dx, ny = y + dy;
+        if (nx >= 0 && nx < 5 && ny >= 0 && ny < 5) toggleAt(ny * 5 + nx);
+      });
+      moves += 1;
+      draw();
+      statusEl.textContent = lights.some(Boolean) ? `Moves: ${moves}` : `Solved in ${moves} moves. R: restart.`;
+    }
+
+    function draw() {
+      boardEl.innerHTML = "";
+      lights.forEach((on, i) => {
+        const light = document.createElement("button");
+        light.type = "button";
+        light.className = `light ${on ? "on" : ""}`;
+        light.addEventListener("click", () => press(i));
+        boardEl.appendChild(light);
+      });
+    }
+
+    addEventListener("keydown", e => { if (e.key === "r" || e.key === "R") reset(); });
+    reset();
+  </script>
+</body>
+</html>

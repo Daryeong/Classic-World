@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Othello</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #111; color: #eee; font-family: Arial, sans-serif; }
+    main { width: min(94vw, 440px); text-align: center; }
+    .board { display: grid; grid-template-columns: repeat(8, 1fr); gap: 3px; background: #0b512f; padding: 6px; }
+    button.cell { aspect-ratio: 1; border: 1px solid #0f7b48; background: #13824c; border-radius: 0; cursor: pointer; }
+    .black::after, .white::after { content: ""; display: block; width: 78%; height: 78%; margin: 11%; border-radius: 50%; }
+    .black::after { background: #111; }
+    .white::after { background: #eee; }
+    p { color: #ccc; }
+    .classic-world-menu-link { position: fixed; top: 14px; left: 14px; border: 1px solid rgba(255,255,255,.35); border-radius: 8px; padding: 9px 12px; background: rgba(12,13,16,.88); color: #fff; font: 700 14px/1 Arial,sans-serif; text-decoration: none; }
+    .classic-world-menu-link:hover, .classic-world-menu-link:focus-visible { background: #f3c15f; color: #111; outline: none; }
+  </style>
+</head>
+<body>
+  <a class="classic-world-menu-link" href="../index.html">Back to Menu</a>
+  <main>
+    <h1>Othello</h1>
+    <div class="board" id="board"></div>
+    <p id="status">Black starts. R: restart.</p>
+  </main>
+  <script>
+    const boardEl = document.getElementById("board");
+    const statusEl = document.getElementById("status");
+    const dirs = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
+    let board, turn;
+
+    function reset() {
+      board = Array(64).fill(0);
+      board[27] = board[36] = 2;
+      board[28] = board[35] = 1;
+      turn = 1;
+      boardEl.innerHTML = "";
+      for (let i = 0; i < 64; i += 1) {
+        const cell = document.createElement("button");
+        cell.className = "cell";
+        cell.type = "button";
+        cell.addEventListener("click", () => play(i));
+        boardEl.appendChild(cell);
+      }
+      draw();
+    }
+
+    function flips(i, player) {
+      if (board[i]) return [];
+      const x = i % 8, y = Math.floor(i / 8), out = [];
+      dirs.forEach(([dx, dy]) => {
+        const line = [];
+        let nx = x + dx, ny = y + dy;
+        while (nx >= 0 && nx < 8 && ny >= 0 && ny < 8 && board[ny * 8 + nx] === 3 - player) {
+          line.push(ny * 8 + nx); nx += dx; ny += dy;
+        }
+        if (line.length && nx >= 0 && nx < 8 && ny >= 0 && ny < 8 && board[ny * 8 + nx] === player) out.push(...line);
+      });
+      return out;
+    }
+
+    function play(i) {
+      const got = flips(i, turn);
+      if (!got.length) return;
+      board[i] = turn;
+      got.forEach(j => { board[j] = turn; });
+      turn = 3 - turn;
+      if (!board.some((_, j) => flips(j, turn).length)) turn = 3 - turn;
+      draw();
+    }
+
+    function draw() {
+      [...boardEl.children].forEach((cell, i) => { cell.className = `cell ${board[i] === 1 ? "black" : board[i] === 2 ? "white" : ""}`; });
+      const black = board.filter(v => v === 1).length, white = board.filter(v => v === 2).length;
+      const moves = board.some((_, i) => flips(i, turn).length);
+      statusEl.textContent = moves ? `${turn === 1 ? "Black" : "White"} to move. Black ${black} - White ${white}.` : `Game over. Black ${black} - White ${white}. R: restart.`;
+    }
+
+    addEventListener("keydown", e => { if (e.key === "r" || e.key === "R") reset(); });
+    reset();
+  </script>
+</body>
+</html>

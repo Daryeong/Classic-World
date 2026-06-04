@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lunar Lander</title>
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: #0b0d12;
+      color: #f2f2f2;
+      font: 16px Arial, sans-serif;
+    }
+
+    main {
+      text-align: center;
+    }
+
+    canvas {
+      display: block;
+      background: #101521;
+      border: 1px solid #4d5668;
+    }
+
+    p {
+      margin: 8px 0 0;
+      color: #c9d0dc;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <canvas id="game" width="640" height="480"></canvas>
+    <p id="status">Arrow keys: thrust and steer to the yellow pad. R: restart.</p>
+  </main>
+
+  <script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    const status = document.getElementById('status');
+    const keys = new Set();
+    const pad = { x: 270, y: 420, w: 100 };
+    let lander;
+    let running;
+    let message;
+    let lastTime = 0;
+
+    function reset() {
+      lander = {
+        x: 130,
+        y: 70,
+        vx: 0.25,
+        vy: 0,
+        angle: 0,
+        fuel: 100
+      };
+      running = true;
+      message = 'Steer to the yellow pad and land gently.';
+      lastTime = 0;
+      requestAnimationFrame(loop);
+    }
+
+    function loop(time) {
+      const dt = Math.min((time - lastTime) / 16.67 || 1, 2);
+      lastTime = time;
+      if (running) update(dt);
+      draw();
+      if (running) requestAnimationFrame(loop);
+    }
+
+    function update(dt) {
+      if (keys.has('ArrowLeft')) lander.angle -= 0.06 * dt;
+      if (keys.has('ArrowRight')) lander.angle += 0.06 * dt;
+
+      if (keys.has('ArrowUp') && lander.fuel > 0) {
+        lander.vx += Math.sin(lander.angle) * 0.08 * dt;
+        lander.vy -= Math.cos(lander.angle) * 0.08 * dt;
+        lander.fuel = Math.max(0, lander.fuel - 0.35 * dt);
+      }
+
+      lander.vy += 0.025 * dt;
+      lander.x += lander.vx * dt;
+      lander.y += lander.vy * dt;
+
+      if (lander.x < 12 || lander.x > canvas.width - 12 || lander.y < 12) {
+        finish(false);
+      }
+
+      const onGround = lander.y + 14 >= pad.y;
+      if (onGround) {
+        const onPad = lander.x > pad.x && lander.x < pad.x + pad.w;
+        const gentle = Math.abs(lander.vx) < 0.55 && lander.vy < 0.9 && Math.abs(lander.angle) < 0.22;
+        lander.y = pad.y - 14;
+        finish(onPad && gentle);
+      }
+
+      status.textContent = `Fuel: ${Math.round(lander.fuel)}  Speed: ${Math.hypot(lander.vx, lander.vy).toFixed(1)}`;
+    }
+
+    function finish(won) {
+      running = false;
+      message = won ? 'Touchdown. R to restart.' : 'Crash. R to restart.';
+      status.textContent = message;
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawStars();
+
+      ctx.strokeStyle = '#788398';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, 438);
+      ctx.lineTo(85, 425);
+      ctx.lineTo(170, 444);
+      ctx.lineTo(pad.x, pad.y);
+      ctx.lineTo(pad.x + pad.w, pad.y);
+      ctx.lineTo(490, 448);
+      ctx.lineTo(canvas.width, 432);
+      ctx.stroke();
+
+      ctx.strokeStyle = '#f7d95b';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(pad.x, pad.y);
+      ctx.lineTo(pad.x + pad.w, pad.y);
+      ctx.stroke();
+
+      ctx.save();
+      ctx.translate(lander.x, lander.y);
+      ctx.rotate(lander.angle);
+      ctx.strokeStyle = '#f2f2f2';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, -14);
+      ctx.lineTo(12, 12);
+      ctx.lineTo(-12, 12);
+      ctx.closePath();
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(-8, 12);
+      ctx.lineTo(-14, 18);
+      ctx.moveTo(8, 12);
+      ctx.lineTo(14, 18);
+      ctx.stroke();
+      if (running && keys.has('ArrowUp') && lander.fuel > 0) {
+        ctx.strokeStyle = '#ff9f43';
+        ctx.beginPath();
+        ctx.moveTo(-5, 14);
+        ctx.lineTo(0, 26);
+        ctx.lineTo(5, 14);
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      ctx.fillStyle = '#f2f2f2';
+      ctx.fillText(message, 16, 24);
+    }
+
+    function drawStars() {
+      ctx.fillStyle = '#d9e3ff';
+      for (let i = 0; i < 42; i += 1) {
+        const x = (i * 97) % canvas.width;
+        const y = (i * 53) % 280 + 10;
+        ctx.fillRect(x, y, 2, 2);
+      }
+    }
+
+    addEventListener('keydown', event => {
+      if (event.key === 'r' || event.key === 'R') reset();
+      if (event.key.startsWith('Arrow')) {
+        event.preventDefault();
+        keys.add(event.key);
+      }
+    });
+
+    addEventListener('keyup', event => {
+      keys.delete(event.key);
+    });
+
+    reset();
+  </script>
+</body>
+</html>

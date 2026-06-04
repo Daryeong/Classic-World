@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hangman</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #151515; color: #eee; font-family: Arial, sans-serif; }
+    main { width: min(94vw, 520px); text-align: center; }
+    .word { font-size: 34px; letter-spacing: 8px; margin: 22px 0; }
+    .letters { display: grid; grid-template-columns: repeat(9, 1fr); gap: 6px; }
+    button { border: 1px solid #666; background: #24272d; color: #fff; padding: 9px 0; cursor: pointer; }
+    button:disabled { opacity: .35; cursor: default; }
+    p { color: #ccc; }
+    .classic-world-menu-link { position: fixed; top: 14px; left: 14px; border: 1px solid rgba(255,255,255,.35); border-radius: 8px; padding: 9px 12px; background: rgba(12,13,16,.88); color: #fff; font: 700 14px/1 Arial,sans-serif; text-decoration: none; }
+    .classic-world-menu-link:hover, .classic-world-menu-link:focus-visible { background: #f3c15f; color: #111; outline: none; }
+  </style>
+</head>
+<body>
+  <a class="classic-world-menu-link" href="../index.html">Back to Menu</a>
+  <main>
+    <h1>Hangman</h1>
+    <div class="word" id="word"></div>
+    <div class="letters" id="letters"></div>
+    <p id="status">Guess the word. 6 misses = game over. R: restart.</p>
+  </main>
+  <script>
+    const words = ["ARCADE", "PUZZLE", "CLASSIC", "BUTTON", "PLAYER"];
+    const wordEl = document.getElementById("word");
+    const lettersEl = document.getElementById("letters");
+    const statusEl = document.getElementById("status");
+    let word, guessed, misses, over;
+
+    function reset() {
+      word = words[Math.floor(Math.random() * words.length)];
+      guessed = new Set();
+      misses = 0;
+      over = false;
+      lettersEl.innerHTML = "";
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").forEach(letter => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.textContent = letter;
+        btn.addEventListener("click", () => choose(letter, btn));
+        lettersEl.appendChild(btn);
+      });
+      draw();
+    }
+
+    function choose(letter, btn) {
+      if (over) return;
+      btn.disabled = true;
+      guessed.add(letter);
+      if (!word.includes(letter)) misses += 1;
+      draw();
+    }
+
+    function draw() {
+      wordEl.textContent = word.split("").map(ch => guessed.has(ch) ? ch : "_").join("");
+      const won = word.split("").every(ch => guessed.has(ch));
+      if (won) { over = true; statusEl.textContent = "Solved. R: restart."; }
+      else if (misses >= 6) { over = true; statusEl.textContent = `Game over. Word was ${word}. R: restart.`; }
+      else statusEl.textContent = `Misses: ${misses}/6`;
+    }
+
+    addEventListener("keydown", e => { if (e.key === "r" || e.key === "R") reset(); });
+    reset();
+  </script>
+</body>
+</html>

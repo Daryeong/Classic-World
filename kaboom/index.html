@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kaboom</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: #151515;
+      color: #f4f4f4;
+      font-family: Arial, sans-serif;
+    }
+
+    main {
+      text-align: center;
+    }
+
+    canvas {
+      display: block;
+      background: #20242b;
+      border: 1px solid #666;
+    }
+
+    p {
+      margin: 8px 0 0;
+      color: #c8c8c8;
+      font-size: 14px;
+    }
+
+    .classic-world-menu-link {
+      position: fixed;
+      top: 14px;
+      left: 14px;
+      z-index: 9999;
+      display: inline-flex;
+      align-items: center;
+      min-height: 38px;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      border-radius: 8px;
+      padding: 9px 12px;
+      background: rgba(12, 13, 16, 0.88);
+      color: #fff;
+      font: 700 14px/1 Arial, sans-serif;
+      text-decoration: none;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    }
+
+    .classic-world-menu-link:hover,
+    .classic-world-menu-link:focus-visible {
+      background: #f3c15f;
+      color: #111;
+      outline: none;
+    }
+  </style>
+</head>
+<body>
+  <a class="classic-world-menu-link" href="../index.html" aria-label="Back to menu">Back to Menu</a>
+  <main>
+    <canvas id="game" width="520" height="420"></canvas>
+    <p id="status">Left/Right: move. Catch bombs. 3 misses = game over. R: restart.</p>
+  </main>
+
+  <script>
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+    const statusEl = document.getElementById("status");
+    const keys = new Set();
+    const player = { x: 220, y: 370, w: 80, h: 18 };
+    let bombs;
+    let score;
+    let lives;
+    let running;
+    let spawnTimer;
+    let lastTime;
+
+    function reset() {
+      player.x = 220;
+      bombs = [];
+      score = 0;
+      lives = 3;
+      running = true;
+      spawnTimer = 0;
+      lastTime = 0;
+      requestAnimationFrame(loop);
+    }
+
+    function loop(time) {
+      const dt = Math.min((time - lastTime) / 16.67 || 1, 2);
+      lastTime = time;
+      if (running) update(dt);
+      draw();
+      if (running) requestAnimationFrame(loop);
+    }
+
+    function update(dt) {
+      if (keys.has("ArrowLeft")) player.x -= 6 * dt;
+      if (keys.has("ArrowRight")) player.x += 6 * dt;
+      player.x = Math.max(0, Math.min(canvas.width - player.w, player.x));
+
+      spawnTimer -= dt;
+      if (spawnTimer <= 0) {
+        bombs.push({
+          x: 24 + Math.random() * (canvas.width - 48),
+          y: 34,
+          vy: 2.2 + score * 0.035
+        });
+        spawnTimer = Math.max(18, 48 - score * 0.8);
+      }
+
+      bombs.forEach(bomb => {
+        bomb.y += bomb.vy * dt;
+      });
+
+      bombs = bombs.filter(bomb => {
+        const caught = bomb.x > player.x && bomb.x < player.x + player.w && bomb.y > player.y && bomb.y < player.y + player.h + 12;
+        if (caught) {
+          score += 1;
+          return false;
+        }
+
+        if (bomb.y > canvas.height) {
+          lives -= 1;
+          if (lives <= 0) {
+            running = false;
+            statusEl.textContent = `Game over. Score: ${score}. R: restart.`;
+          }
+          return false;
+        }
+
+        return true;
+      });
+
+      if (running) statusEl.textContent = `Score: ${score}  Lives: ${lives}`;
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = "#2b3039";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = "#c7d2e5";
+      ctx.fillRect(120, 24, 280, 12);
+      ctx.fillStyle = "#f0d36a";
+      ctx.fillRect(player.x, player.y, player.w, player.h);
+
+      ctx.fillStyle = "#f05b5b";
+      bombs.forEach(bomb => {
+        ctx.beginPath();
+        ctx.arc(bomb.x, bomb.y, 8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillRect(bomb.x - 2, bomb.y - 13, 4, 7);
+      });
+
+      ctx.fillStyle = "#f4f4f4";
+      ctx.fillText("Kaboom", 16, 22);
+    }
+
+    addEventListener("keydown", event => {
+      if (event.key === "r" || event.key === "R") reset();
+      if (event.key.startsWith("Arrow")) {
+        event.preventDefault();
+        keys.add(event.key);
+      }
+    });
+
+    addEventListener("keyup", event => {
+      keys.delete(event.key);
+    });
+
+    reset();
+  </script>
+</body>
+</html>

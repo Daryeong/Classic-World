@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fifteen Puzzle</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #101114; color: #eee; font-family: Arial, sans-serif; }
+    main { width: min(92vw, 360px); text-align: center; }
+    .board { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+    button.tile { aspect-ratio: 1; border: 1px solid #555; background: #2d343f; color: #fff; font-size: 26px; cursor: pointer; }
+    .empty { background: #101114 !important; border-color: #25272d !important; cursor: default !important; }
+    p { color: #ccc; }
+    .classic-world-menu-link { position: fixed; top: 14px; left: 14px; z-index: 9999; border: 1px solid rgba(255,255,255,.35); border-radius: 8px; padding: 9px 12px; background: rgba(12,13,16,.88); color: #fff; font: 700 14px/1 Arial,sans-serif; text-decoration: none; }
+    .classic-world-menu-link:hover, .classic-world-menu-link:focus-visible { background: #f3c15f; color: #111; outline: none; }
+  </style>
+</head>
+<body>
+  <a class="classic-world-menu-link" href="../index.html">Back to Menu</a>
+  <main>
+    <h1>Fifteen Puzzle</h1>
+    <div class="board" id="board"></div>
+    <p id="status">Order: 1 2 3 4 / 5 6 7 8 / 9 10 11 12 / 13 14 15 blank. R: shuffle.</p>
+  </main>
+  <script>
+    const boardEl = document.getElementById("board");
+    const statusEl = document.getElementById("status");
+    let tiles;
+
+    function reset() {
+      tiles = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,0];
+      for (let i = 0; i < 120; i += 1) {
+        const empty = tiles.indexOf(0);
+        const moves = neighbors(empty);
+        swap(empty, moves[Math.floor(Math.random() * moves.length)]);
+      }
+      statusEl.textContent = "Order: 1 2 3 4 / 5 6 7 8 / 9 10 11 12 / 13 14 15 blank. R: shuffle.";
+      draw();
+    }
+
+    function neighbors(i) {
+      const x = i % 4, y = Math.floor(i / 4), out = [];
+      [[1,0],[-1,0],[0,1],[0,-1]].forEach(([dx, dy]) => {
+        const nx = x + dx, ny = y + dy;
+        if (nx >= 0 && nx < 4 && ny >= 0 && ny < 4) out.push(ny * 4 + nx);
+      });
+      return out;
+    }
+
+    function swap(a, b) { [tiles[a], tiles[b]] = [tiles[b], tiles[a]]; }
+
+    function move(i) {
+      const empty = tiles.indexOf(0);
+      if (!neighbors(empty).includes(i)) return;
+      swap(empty, i);
+      draw();
+      if (tiles.join(",") === "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,0") statusEl.textContent = "Solved. R: shuffle.";
+    }
+
+    function draw() {
+      boardEl.innerHTML = "";
+      tiles.forEach((value, i) => {
+        const tile = document.createElement("button");
+        tile.type = "button";
+        tile.className = `tile ${value ? "" : "empty"}`;
+        tile.textContent = value || "";
+        tile.addEventListener("click", () => move(i));
+        boardEl.appendChild(tile);
+      });
+    }
+
+    addEventListener("keydown", e => { if (e.key === "r" || e.key === "R") reset(); });
+    reset();
+  </script>
+</body>
+</html>

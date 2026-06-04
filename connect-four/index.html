@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Connect Four</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #111; color: #eee; font-family: Arial, sans-serif; }
+    main { width: min(94vw, 520px); text-align: center; }
+    .board { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; padding: 8px; background: #2451a6; }
+    button.cell { aspect-ratio: 1; border: 0; border-radius: 50%; background: #111; cursor: pointer; }
+    .p1 { background: #e3c84f !important; }
+    .p2 { background: #d94f4f !important; }
+    p { color: #ccc; }
+    .classic-world-menu-link { position: fixed; top: 14px; left: 14px; z-index: 9999; border: 1px solid rgba(255,255,255,.35); border-radius: 8px; padding: 9px 12px; background: rgba(12,13,16,.88); color: #fff; font: 700 14px/1 Arial,sans-serif; text-decoration: none; }
+    .classic-world-menu-link:hover, .classic-world-menu-link:focus-visible { background: #f3c15f; color: #111; outline: none; }
+  </style>
+</head>
+<body>
+  <a class="classic-world-menu-link" href="../index.html">Back to Menu</a>
+  <main>
+    <h1>Connect Four</h1>
+    <div class="board" id="board"></div>
+    <p id="status">You are Yellow. Click a column. Red is AI. R: restart.</p>
+  </main>
+  <script>
+    const boardEl = document.getElementById("board");
+    const statusEl = document.getElementById("status");
+    const rows = 6, cols = 7;
+    let grid, turn, over;
+
+    function reset() {
+      grid = Array.from({ length: rows }, () => Array(cols).fill(0));
+      turn = 1; over = false;
+      boardEl.innerHTML = "";
+      for (let r = 0; r < rows; r += 1) for (let c = 0; c < cols; c += 1) {
+        const cell = document.createElement("button");
+        cell.className = "cell";
+        cell.type = "button";
+        cell.addEventListener("click", () => drop(c));
+        boardEl.appendChild(cell);
+      }
+      statusEl.textContent = "You are Yellow. Click a column. Red is AI. R: restart.";
+      draw();
+    }
+
+    function drop(col) {
+      if (over || turn !== 1) return;
+      play(col);
+      if (!over) setTimeout(aiMove, 300);
+    }
+
+    function play(col) {
+      for (let r = rows - 1; r >= 0; r -= 1) {
+        if (!grid[r][col]) {
+          grid[r][col] = turn;
+          if (wins(r, col)) {
+            over = true;
+            statusEl.textContent = `${turn === 1 ? "Yellow" : "Red"} wins. R: restart.`;
+          } else {
+            turn = turn === 1 ? 2 : 1;
+            statusEl.textContent = turn === 1 ? "Your move." : "AI thinking.";
+          }
+          draw();
+          return;
+        }
+      }
+    }
+
+    function aiMove() {
+      if (over || turn !== 2) return;
+      const colsOpen = [...Array(cols).keys()].filter(c => !grid[0][c]);
+      const winning = colsOpen.find(c => wouldWin(c, 2));
+      const blocking = colsOpen.find(c => wouldWin(c, 1));
+      play(winning ?? blocking ?? colsOpen[Math.floor(Math.random() * colsOpen.length)]);
+    }
+
+    function wouldWin(col, player) {
+      for (let r = rows - 1; r >= 0; r -= 1) {
+        if (!grid[r][col]) {
+          grid[r][col] = player;
+          const oldTurn = turn;
+          turn = player;
+          const result = wins(r, col);
+          turn = oldTurn;
+          grid[r][col] = 0;
+          return result;
+        }
+      }
+      return false;
+    }
+
+    function wins(row, col) {
+      return [[1,0],[0,1],[1,1],[1,-1]].some(([dr, dc]) => count(row, col, dr, dc) + count(row, col, -dr, -dc) - 1 >= 4);
+    }
+
+    function count(row, col, dr, dc) {
+      let n = 0, r = row, c = col;
+      while (grid[r] && grid[r][c] === turn) { n += 1; r += dr; c += dc; }
+      return n;
+    }
+
+    function draw() {
+      [...boardEl.children].forEach((cell, i) => {
+        const value = grid[Math.floor(i / cols)][i % cols];
+        cell.className = `cell ${value ? `p${value}` : ""}`;
+      });
+    }
+
+    addEventListener("keydown", e => { if (e.key === "r" || e.key === "R") reset(); });
+    reset();
+  </script>
+</body>
+</html>

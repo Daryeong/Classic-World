@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Battleship</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #101114; color: #eee; font-family: Arial, sans-serif; }
+    main { width: min(94vw, 420px); text-align: center; }
+    .board { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; }
+    button.cell { aspect-ratio: 1; border: 1px solid #4f657e; background: #17324a; color: #fff; cursor: pointer; }
+    .hit { background: #c94f4f !important; }
+    .miss { background: #6b7887 !important; }
+    p { color: #ccc; }
+    .classic-world-menu-link { position: fixed; top: 14px; left: 14px; border: 1px solid rgba(255,255,255,.35); border-radius: 8px; padding: 9px 12px; background: rgba(12,13,16,.88); color: #fff; font: 700 14px/1 Arial,sans-serif; text-decoration: none; }
+    .classic-world-menu-link:hover, .classic-world-menu-link:focus-visible { background: #f3c15f; color: #111; outline: none; }
+  </style>
+</head>
+<body>
+  <a class="classic-world-menu-link" href="../index.html">Back to Menu</a>
+  <main>
+    <h1>Battleship</h1>
+    <div class="board" id="board"></div>
+    <p id="status">Find 6 hidden ship tiles. R: restart.</p>
+  </main>
+  <script>
+    const boardEl = document.getElementById("board");
+    const statusEl = document.getElementById("status");
+    let ships, shots, hits, over;
+
+    function reset() {
+      ships = new Set(["2,1","3,1","4,1","1,4","2,4","3,4"]);
+      shots = new Set();
+      hits = 0;
+      over = false;
+      boardEl.innerHTML = "";
+      for (let i = 0; i < 36; i += 1) {
+        const cell = document.createElement("button");
+        cell.className = "cell";
+        cell.type = "button";
+        cell.addEventListener("click", () => fire(i));
+        boardEl.appendChild(cell);
+      }
+      statusEl.textContent = "Find 6 hidden ship tiles. R: restart.";
+    }
+
+    function fire(i) {
+      if (over) return;
+      const key = `${i % 6},${Math.floor(i / 6)}`;
+      if (shots.has(key)) return;
+      shots.add(key);
+      if (ships.has(key)) { hits += 1; boardEl.children[i].classList.add("hit"); boardEl.children[i].textContent = "X"; }
+      else { boardEl.children[i].classList.add("miss"); boardEl.children[i].textContent = "-"; }
+      statusEl.textContent = hits === ships.size ? "Fleet sunk. R: restart." : `Hits: ${hits}/${ships.size}`;
+      over = hits === ships.size;
+    }
+
+    addEventListener("keydown", e => { if (e.key === "r" || e.key === "R") reset(); });
+    reset();
+  </script>
+</body>
+</html>

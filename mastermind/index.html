@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mastermind</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #151515; color: #eee; font-family: Arial, sans-serif; }
+    main { width: min(94vw, 460px); text-align: center; }
+    .row, .pick { display: flex; justify-content: center; gap: 8px; margin: 8px 0; }
+    button, .peg { width: 42px; height: 42px; border: 1px solid #666; border-radius: 50%; background: #2a2d32; color: #fff; cursor: pointer; }
+    .log { min-height: 140px; text-align: left; color: #ccc; }
+    p { color: #ccc; }
+    .classic-world-menu-link { position: fixed; top: 14px; left: 14px; border: 1px solid rgba(255,255,255,.35); border-radius: 8px; padding: 9px 12px; background: rgba(12,13,16,.88); color: #fff; font: 700 14px/1 Arial,sans-serif; text-decoration: none; }
+    .classic-world-menu-link:hover, .classic-world-menu-link:focus-visible { background: #f3c15f; color: #111; outline: none; }
+  </style>
+</head>
+<body>
+  <a class="classic-world-menu-link" href="../index.html">Back to Menu</a>
+  <main>
+    <h1>Mastermind</h1>
+    <div class="pick" id="pick"></div>
+    <div class="row" id="guess"></div>
+    <p id="status">Guess 4 colors. Black = right spot, White = right color.</p>
+    <div class="log" id="log"></div>
+  </main>
+  <script>
+    const colors = ["red", "gold", "limegreen", "dodgerblue", "violet", "white"];
+    const pickEl = document.getElementById("pick");
+    const guessEl = document.getElementById("guess");
+    const statusEl = document.getElementById("status");
+    const logEl = document.getElementById("log");
+    let secret, guess, tries, over;
+
+    function reset() {
+      secret = Array.from({ length: 4 }, () => colors[Math.floor(Math.random() * colors.length)]);
+      guess = [];
+      tries = 0;
+      over = false;
+      logEl.innerHTML = "";
+      drawGuess();
+    }
+
+    colors.forEach(color => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.style.background = color;
+      btn.addEventListener("click", () => add(color));
+      pickEl.appendChild(btn);
+    });
+
+    function add(color) {
+      if (over) return;
+      guess.push(color);
+      if (guess.length === 4) check();
+      drawGuess();
+    }
+
+    function check() {
+      tries += 1;
+      let black = 0, white = 0;
+      const leftSecret = [], leftGuess = [];
+      for (let i = 0; i < 4; i += 1) {
+        if (guess[i] === secret[i]) black += 1;
+        else { leftSecret.push(secret[i]); leftGuess.push(guess[i]); }
+      }
+      leftGuess.forEach(color => {
+        const i = leftSecret.indexOf(color);
+        if (i >= 0) { white += 1; leftSecret.splice(i, 1); }
+      });
+      logEl.innerHTML = `<div>${tries}. ${guess.join(", ")} = ${black} black, ${white} white</div>` + logEl.innerHTML;
+      if (black === 4) { over = true; statusEl.textContent = `Solved in ${tries}. R: restart.`; }
+      else if (tries >= 10) { over = true; statusEl.textContent = `Out of tries. Code was ${secret.join(", ")}. R: restart.`; }
+      guess = [];
+    }
+
+    function drawGuess() {
+      guessEl.innerHTML = "";
+      for (let i = 0; i < 4; i += 1) {
+        const peg = document.createElement("div");
+        peg.className = "peg";
+        if (guess[i]) peg.style.background = guess[i];
+        guessEl.appendChild(peg);
+      }
+    }
+
+    addEventListener("keydown", e => { if (e.key === "r" || e.key === "R") reset(); });
+    reset();
+  </script>
+</body>
+</html>
