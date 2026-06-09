@@ -31,10 +31,8 @@
     }
 
     .classic-world-menu-link {
-      position: fixed;
-      top: 14px;
-      left: 14px;
-      z-index: 10;
+      display: inline-block;
+      margin-top: 14px;
       border: 1px solid #777;
       border-radius: 8px;
       padding: 9px 12px;
@@ -53,10 +51,10 @@
   </style>
 </head>
 <body>
-  <a class="classic-world-menu-link" href="../index.html" aria-label="Back to menu">Back to Menu</a>
   <main>
     <canvas id="game" width="640" height="480"></canvas>
     <p id="status">Arrow keys: thrust and steer to the yellow pad. R: restart.</p>
+    <a class="classic-world-menu-link" href="../index.html" aria-label="Back to menu">Back to Menu</a>
   </main>
 
   <script>
