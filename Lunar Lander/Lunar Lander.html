@@ -29,9 +29,31 @@
       margin: 8px 0 0;
       color: #c9d0dc;
     }
+
+    .classic-world-menu-link {
+      position: fixed;
+      top: 14px;
+      left: 14px;
+      z-index: 10;
+      border: 1px solid #777;
+      border-radius: 8px;
+      padding: 9px 12px;
+      background: rgba(12, 13, 16, 0.88);
+      color: #fff;
+      text-decoration: none;
+      font-weight: 700;
+    }
+
+    .classic-world-menu-link:hover,
+    .classic-world-menu-link:focus-visible {
+      background: #f3c15f;
+      color: #111;
+      outline: none;
+    }
   </style>
 </head>
 <body>
+  <a class="classic-world-menu-link" href="../index.html" aria-label="Back to menu">Back to Menu</a>
   <main>
     <canvas id="game" width="640" height="480"></canvas>
     <p id="status">Arrow keys: thrust and steer to the yellow pad. R: restart.</p>
