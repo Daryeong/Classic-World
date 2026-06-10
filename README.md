@@ -35,3 +35,6 @@ Open `index.html` to choose a game.
 - `color-flood/index.html`
 - `word-scramble/index.html`
 - `reaction-timer/index.html`
+- `2048/index.html`
+- `checkers/index.html`
+- `maze-chase/index.html`

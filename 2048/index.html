@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>2048</title>
+<style>*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:#111;color:#eee;font-family:Arial,sans-serif}main{width:min(92vw,420px);text-align:center}.board{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:8px;background:#333;border-radius:8px}.cell{aspect-ratio:1;display:grid;place-items:center;background:#222;border-radius:5px;font-size:clamp(20px,7vw,34px);font-weight:bold}p{color:#ccc}button{border:1px solid #777;background:#222;color:#fff;padding:9px 14px;cursor:pointer}.classic-world-menu-link{position:fixed;top:14px;left:14px;border:1px solid #777;border-radius:8px;padding:9px 12px;background:#111;color:#fff;font-weight:bold;text-decoration:none}</style></head>
+<body><a class="classic-world-menu-link" href="../index.html">Back to Menu</a><main><h1>2048</h1><p id="status"></p><div class="board" id="board"></div><p><button id="restart">Restart</button></p></main>
+<script>
+const boardEl=document.getElementById("board"),statusEl=document.getElementById("status");let board,score,start;
+function reset(){board=Array(16).fill(0);score=0;addTile();addTile();draw()}
+function addTile(){const empty=board.map((v,i)=>v?-1:i).filter(i=>i>=0);if(empty.length)board[empty[Math.floor(Math.random()*empty.length)]]=Math.random()<.9?2:4}
+function slide(line){const values=line.filter(Boolean);for(let i=0;i<values.length-1;i++)if(values[i]===values[i+1]){values[i]*=2;score+=values[i];values.splice(i+1,1)}return values.concat(Array(4-values.length).fill(0))}
+function move(direction){const old=board.join();for(let n=0;n<4;n++){const indices=[];for(let i=0;i<4;i++)indices.push(direction<2?n*4+i:i*4+n);if(direction===1||direction===3)indices.reverse();const next=slide(indices.map(i=>board[i]));indices.forEach((index,i)=>board[index]=next[i])}if(board.join()!==old)addTile();draw()}
+function draw(){boardEl.innerHTML=board.map(v=>`<div class="cell">${v||""}</div>`).join("");statusEl.textContent=`${board.includes(2048)?"You reached 2048! ":""}Score: ${score}`}
+addEventListener("keydown",e=>{const keys={ArrowLeft:0,ArrowRight:1,ArrowUp:2,ArrowDown:3};if(keys[e.key]!==undefined){e.preventDefault();move(keys[e.key])}});
+addEventListener("touchstart",e=>start=e.touches[0]);addEventListener("touchend",e=>{if(!start)return;const end=e.changedTouches[0],dx=end.clientX-start.clientX,dy=end.clientY-start.clientY;if(Math.max(Math.abs(dx),Math.abs(dy))>30)move(Math.abs(dx)>Math.abs(dy)?(dx>0?1:0):(dy>0?3:2));start=null});
+document.getElementById("restart").addEventListener("click",reset);reset();
+</script></body></html>
